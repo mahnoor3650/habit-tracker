@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import { Loader2, Calendar, CalendarDays, CalendarRange } from "lucide-react"
+import { Loader2, CalendarDays } from "lucide-react"
 import * as icons from "lucide-react"
+import { toast } from "sonner"
 
-type ViewMode = "week" | "15days" | "month"
+export type ViewMode = "week" | "15days" | "month"
 
 type HabitTableProps = {
 	onHabitClick: (habit: Habit) => void
+	view: ViewMode
 }
 
 function getDatesForView(view: ViewMode): Date[] {
@@ -23,12 +24,27 @@ function getDatesForView(view: ViewMode): Date[] {
 		for (let day = 1; day <= daysInMonth; day++) {
 			dates.push(new Date(year, month, day))
 		}
-	} else {
-		const daysToShow = view === "week" ? 7 : 15
-		for (let i = daysToShow - 1; i >= 0; i--) {
-			const d = new Date(now)
-			d.setDate(now.getDate() - i)
-			dates.push(d)
+	} else if (view === "week") {
+		// Show current week (Sunday to Saturday)
+		const currentDay = now.getDay() // 0 = Sunday, 6 = Saturday
+		const startOfWeek = new Date(now)
+		startOfWeek.setDate(now.getDate() - currentDay) // Go back to Sunday
+		startOfWeek.setHours(0, 0, 0, 0)
+		
+		for (let i = 0; i < 7; i++) {
+			const date = new Date(startOfWeek)
+			date.setDate(startOfWeek.getDate() + i)
+			dates.push(date)
+		}
+	} else if (view === "15days") {
+		// Show 15 days starting from today (today + next 14 days)
+		const today = new Date(now)
+		today.setHours(0, 0, 0, 0)
+		
+		for (let i = 0; i < 15; i++) {
+			const date = new Date(today)
+			date.setDate(today.getDate() + i)
+			dates.push(date)
 		}
 	}
 
@@ -47,11 +63,10 @@ function formatDayHeader(date: Date): string {
 	return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
 }
 
-export function HabitTable({ onHabitClick }: HabitTableProps) {
+export function HabitTable({ onHabitClick, view }: HabitTableProps) {
 	const { habits, loading, getEntriesForHabit, toggleHabitEntry } = useHabits()
 	const [entriesMap, setEntriesMap] = useState<Record<string, Record<string, boolean>>>({})
 	const [loadingEntries, setLoadingEntries] = useState(true)
-	const [view, setView] = useState<ViewMode>("15days")
 
 	const dates = getDatesForView(view)
 	const today = formatDateISO(new Date())
@@ -60,8 +75,38 @@ export function HabitTable({ onHabitClick }: HabitTableProps) {
 		async function loadEntries() {
 			setLoadingEntries(true)
 			const map: Record<string, Record<string, boolean>> = {}
+			
+			// Calculate start date based on view
+			let startDate: string | undefined
+			let daysToFetch: number
+			
+			if (view === "month") {
+				// For month view, fetch from the first day of the current month
+				const now = new Date()
+				startDate = formatDateISO(new Date(now.getFullYear(), now.getMonth(), 1))
+				daysToFetch = 31
+			} else if (view === "week") {
+				// For week view, fetch from the first day of the current week (Sunday)
+				const now = new Date()
+				const currentDay = now.getDay() // 0 = Sunday, 6 = Saturday
+				const startOfWeek = new Date(now)
+				startOfWeek.setDate(now.getDate() - currentDay) // Go back to Sunday
+				startOfWeek.setHours(0, 0, 0, 0)
+				startDate = formatDateISO(startOfWeek)
+				daysToFetch = 7
+			} else if (view === "15days") {
+				// For 15 days view, fetch from today
+				const today = new Date()
+				today.setHours(0, 0, 0, 0)
+				startDate = formatDateISO(today)
+				daysToFetch = 15
+			} else {
+				daysToFetch = 7
+			}
+			
 			for (const habit of habits) {
-				const { data } = await getEntriesForHabit(habit.id, 31)
+				// Fetch entries for the specific date range
+				const { data } = await getEntriesForHabit(habit.id, daysToFetch, startDate)
 				map[habit.id] = data ?? {}
 			}
 			setEntriesMap(map)
@@ -72,11 +117,19 @@ export function HabitTable({ onHabitClick }: HabitTableProps) {
 		} else {
 			setLoadingEntries(false)
 		}
-	}, [habits, getEntriesForHabit])
+	}, [habits, getEntriesForHabit, view])
 
 	async function handleToggle(habitId: string, date: string, e: React.MouseEvent) {
 		e.stopPropagation()
-		await toggleHabitEntry(habitId, date)
+		const habit = habits.find((h) => h.id === habitId)
+		const wasChecked = entriesMap[habitId]?.[date] || false
+		const result = await toggleHabitEntry(habitId, date)
+		
+		if (result.error) {
+			toast.error(result.error)
+			return
+		}
+		
 		setEntriesMap((prev) => ({
 			...prev,
 			[habitId]: {
@@ -84,12 +137,28 @@ export function HabitTable({ onHabitClick }: HabitTableProps) {
 				[date]: !prev[habitId]?.[date],
 			},
 		}))
+		
+		const habitName = habit?.name || "Habit"
+		const dateStr = new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+		
+		if (wasChecked) {
+			toast.info(`${habitName} unchecked for ${dateStr}`)
+		} else {
+			toast.success(`${habitName} checked for ${dateStr}! 🎉`)
+		}
 	}
 
 	function getIcon(iconName?: string | null) {
-		if (!iconName) return null
-		const IconComponent = (icons as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
-		return IconComponent ? <IconComponent className="size-5" /> : null
+		// If it's an emoji (not a lucide icon name), return it directly
+		if (iconName && /[\p{Emoji}\u200d]/u.test(iconName)) {
+			return <span className="text-2xl">{iconName}</span>
+		}
+		// Fallback to lucide icon if it's a string name (for backwards compatibility)
+		if (iconName) {
+			const IconComponent = (icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
+			return IconComponent ? <IconComponent className="size-5" /> : null
+		}
+		return null
 	}
 
 	if (loading || loadingEntries) {
@@ -111,38 +180,6 @@ export function HabitTable({ onHabitClick }: HabitTableProps) {
 
 	return (
 		<div className="space-y-4">
-			{/* View Switcher */}
-			<div className="flex items-center gap-2">
-				<span className="text-sm text-muted-foreground mr-2">View:</span>
-				<Button
-					variant={view === "week" ? "default" : "outline"}
-					size="sm"
-					onClick={() => setView("week")}
-					className="gap-2"
-				>
-					<Calendar className="size-4" />
-					Week
-				</Button>
-				<Button
-					variant={view === "15days" ? "default" : "outline"}
-					size="sm"
-					onClick={() => setView("15days")}
-					className="gap-2"
-				>
-					<CalendarRange className="size-4" />
-					15 Days
-				</Button>
-				<Button
-					variant={view === "month" ? "default" : "outline"}
-					size="sm"
-					onClick={() => setView("month")}
-					className="gap-2"
-				>
-					<CalendarDays className="size-4" />
-					Month
-				</Button>
-			</div>
-
 			{/* Table */}
 			<div className="w-full overflow-x-auto border rounded-xl bg-card shadow-sm">
 				<table className="w-full border-collapse">
@@ -190,8 +227,10 @@ export function HabitTable({ onHabitClick }: HabitTableProps) {
 							>
 								<td className="p-5 sticky left-0 bg-card hover:bg-accent/30 z-10 border-r transition-colors">
 									<div className="flex items-center gap-4">
-										<div className="size-10 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
-											{getIcon(habit.icon) || <CalendarDays className="size-5" />}
+										<div className="size-12 rounded-lg flex items-center justify-center bg-primary/10 shrink-0">
+											{getIcon(habit.icon) || (
+												<span className="text-2xl">📅</span>
+											)}
 										</div>
 										<div>
 											<div className="font-medium text-base">{habit.name}</div>

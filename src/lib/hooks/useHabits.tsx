@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/hooks/useAuth"
 
@@ -48,7 +48,22 @@ export function calculateCompletionPercent(entriesByDate: Record<string, boolean
 	return Math.round((completed / days.length) * 100)
 }
 
-export function useHabits() {
+type HabitsContextValue = {
+	habits: Habit[]
+	loading: boolean
+	error: string | null
+	refresh: () => Promise<void>
+	createHabit: (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null }) => Promise<{ data?: Habit; error?: string }>
+	updateHabit: (id: string, updates: Partial<Omit<Habit, "id" | "user_id">>) => Promise<{ data?: Habit; error?: string }>
+	deleteHabit: (id: string) => Promise<{ error?: string }>
+	getEntriesForHabit: (habitId: string, days?: number, startDateISO?: string) => Promise<{ data?: Record<string, boolean>; error?: string }>
+	toggleHabitEntry: (habitId: string, dateISO: string) => Promise<{ error?: string }>
+	getHabitStreak: (habitId: string) => Promise<{ data?: number; error?: string }>
+}
+
+const HabitsContext = createContext<HabitsContextValue | undefined>(undefined)
+
+export function HabitsProvider({ children }: { children: React.ReactNode }) {
 	const { user } = useAuth()
 	const [habits, setHabits] = useState<Habit[]>([])
 	const [loading, setLoading] = useState(false)
@@ -106,8 +121,15 @@ export function useHabits() {
 		return {}
 	}, [])
 
-	const getEntriesForHabit = useCallback(async (habitId: string, days = 30) => {
-		const startDate = getLastNDates(days)[0]
+	const getEntriesForHabit = useCallback(async (habitId: string, days = 30, startDateISO?: string) => {
+		let startDate: string
+		if (startDateISO) {
+			// Use the provided start date (e.g., first day of current month)
+			startDate = startDateISO
+		} else {
+			// Default: get last N days from today
+			startDate = getLastNDates(days)[0]
+		}
 		const { data, error } = await supabase
 			.from("habit_entries")
 			.select("*")
@@ -153,7 +175,7 @@ export function useHabits() {
 		return { data: streak }
 	}, [getEntriesForHabit])
 
-	return useMemo(
+	const value = useMemo<HabitsContextValue>(
 		() => ({
 			habits,
 			loading,
@@ -179,6 +201,14 @@ export function useHabits() {
 			getHabitStreak,
 		]
 	)
+
+	return <HabitsContext.Provider value={value}>{children}</HabitsContext.Provider>
+}
+
+export function useHabits() {
+	const ctx = useContext(HabitsContext)
+	if (!ctx) throw new Error("useHabits must be used within HabitsProvider")
+	return ctx
 }
 
 

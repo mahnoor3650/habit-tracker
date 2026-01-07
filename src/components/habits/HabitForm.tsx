@@ -47,7 +47,7 @@ export function HabitForm({
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-6">
+		<form id="habit-form" onSubmit={handleSubmit} className="space-y-6">
 			<div className="space-y-2">
 				<Label htmlFor="name">Name</Label>
 				<Input
@@ -71,9 +71,13 @@ export function HabitForm({
 				<Label>Icon</Label>
 				<IconPicker selectedIcon={values.icon} onIconSelect={(icon) => update("icon", icon)} />
 			</div>
-			<Button type="submit" className="w-full" disabled={loading}>
-				{loading ? "Saving..." : submitLabel}
-			</Button>
+			{submitLabel === "Create" && (
+				<div className="flex justify-end pt-2">
+					<Button type="submit" disabled={loading}>
+						{loading ? "Creating..." : submitLabel}
+					</Button>
+				</div>
+			)}
 		</form>
 	)
 }
