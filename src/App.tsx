@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard"
 import HabitDetail from "@/pages/HabitDetail"
 import { ThemeProvider } from "@/components/layout/ThemeProvider"
 import { Header } from "@/components/layout/Header"
+import { Toaster } from "@/components/ui/sonner"
 
 export default function App() {
 	return (
@@ -34,6 +35,7 @@ export default function App() {
 						/>
 						<Route path="*" element={<Navigate to="/" replace />} />
 					</Routes>
+					<Toaster />
 				</BrowserRouter>
 			</AuthProvider>
 		</ThemeProvider>

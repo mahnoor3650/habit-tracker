@@ -3,9 +3,11 @@ import { useAuth } from "@/lib/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 export function SignupForm({ onSuccess }: { onSuccess?: () => void }) {
 	const { signUp } = useAuth()
+	const [displayName, setDisplayName] = useState("")
 	const [email, setEmail] = useState("")
 	const [password, setPassword] = useState("")
 	const [error, setError] = useState<string | null>(null)
@@ -15,14 +17,29 @@ export function SignupForm({ onSuccess }: { onSuccess?: () => void }) {
 		e.preventDefault()
 		setError(null)
 		setLoading(true)
-		const { error } = await signUp(email, password)
+		const { error } = await signUp(email, password, displayName.trim() || undefined)
 		setLoading(false)
 		if (error) setError(error)
-		else onSuccess?.()
+		else {
+			toast.success("Verification email sent", {
+				description: "Please verify your account to sign in.",
+			})
+			onSuccess?.()
+		}
 	}
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
+			<div className="space-y-2">
+				<Label htmlFor="displayName">Display name</Label>
+				<Input
+					id="displayName"
+					placeholder="Horizon"
+					value={displayName}
+					onChange={(e) => setDisplayName(e.target.value)}
+					required
+				/>
+			</div>
 			<div className="space-y-2">
 				<Label htmlFor="email">Email</Label>
 				<Input
