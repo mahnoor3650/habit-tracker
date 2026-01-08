@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import  { useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useHabits } from "@/lib/hooks/useHabits"
 import { HabitCalendar } from "@/components/habits/HabitCalendar"

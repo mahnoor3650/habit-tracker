@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import  { useEffect, useMemo, useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { getLastNDates, calculateCompletionPercent, calculateStreak } from "@/lib/hooks/useHabits"
 import { useHabits } from "@/lib/hooks/useHabits"

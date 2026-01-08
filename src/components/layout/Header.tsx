@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { useTheme } from "@/components/layout/ThemeProvider"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { Button } from "@/components/ui/button"
