@@ -78,13 +78,6 @@ export function MoodSelector({ selectedMoods, onMoodsChange }: MoodSelectorProps
 					)
 				})}
 			</div>
-			{moods.length > 0 && (
-				<div className="pt-1.5 border-t">
-					<p className="text-xs text-muted-foreground">
-						{moods.join(" ")}
-					</p>
-				</div>
-			)}
 		</Card>
 	)
 }

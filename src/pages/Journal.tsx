@@ -37,6 +37,13 @@ export default function Journal() {
 	const [content, setContent] = useState("")
 	const [isSaving, setIsSaving] = useState(false)
 	const [hasChanges, setHasChanges] = useState(false)
+	const [initialData, setInitialData] = useState<{
+		moods: string[]
+		gratitude: string[]
+		highlights: string[]
+		quote: string | null
+		content: string
+	} | null>(null)
 
 	// Load entry for selected date (only if date is selected)
 	useEffect(() => {
@@ -45,34 +52,67 @@ export default function Journal() {
 		async function loadEntry() {
 			const result = await getEntryByDate(dateStr)
 			if (result.data) {
-				setMoods(result.data.moods || [])
-				setGratitude(result.data.gratitude || [])
+				const loadedMoods = result.data.moods || []
+				const loadedGratitude = result.data.gratitude || []
 				// Parse highlight - if it's a string, split by newlines
 				const highlightData = result.data.highlight || ""
 				const parsedHighlights = highlightData 
 					? (typeof highlightData === 'string' ? highlightData.split('\n').filter(h => h.trim()) : [])
 					: []
+				const loadedQuote = result.data.quote || null
+				const loadedContent = result.data.content || ""
+				
+				setMoods(loadedMoods)
+				setGratitude(loadedGratitude)
 				setHighlights(parsedHighlights)
-				setQuote(result.data.quote || null)
-				setContent(result.data.content || "")
+				setQuote(loadedQuote)
+				setContent(loadedContent)
+				
+				// Store initial data for comparison
+				setInitialData({
+					moods: loadedMoods,
+					gratitude: loadedGratitude,
+					highlights: parsedHighlights,
+					quote: loadedQuote,
+					content: loadedContent,
+				})
 				setHasChanges(false)
 			} else {
 				// New entry - reset all fields
-				setMoods([])
-				setGratitude([])
-				setHighlights([])
-				setQuote(null)
-				setContent("")
+				const emptyData = {
+					moods: [],
+					gratitude: [],
+					highlights: [],
+					quote: null,
+					content: "",
+				}
+				setMoods(emptyData.moods)
+				setGratitude(emptyData.gratitude)
+				setHighlights(emptyData.highlights)
+				setQuote(emptyData.quote)
+				setContent(emptyData.content)
+				setInitialData(emptyData)
 				setHasChanges(false)
 			}
 		}
 		loadEntry()
 	}, [dateStr, getEntryByDate])
 
-	// Track changes
+	// Track changes by comparing with initial data
 	useEffect(() => {
-		setHasChanges(true)
-	}, [moods, gratitude, highlights, quote, content])
+		if (!initialData) {
+			setHasChanges(false)
+			return
+		}
+		
+		const hasMoodChange = JSON.stringify(moods.sort()) !== JSON.stringify(initialData.moods.sort())
+		const hasGratitudeChange = JSON.stringify(gratitude.sort()) !== JSON.stringify(initialData.gratitude.sort())
+		const hasHighlightChange = JSON.stringify(highlights.sort()) !== JSON.stringify(initialData.highlights.sort())
+		const hasQuoteChange = quote !== initialData.quote
+		const hasContentChange = content !== initialData.content
+		
+		setHasChanges(hasMoodChange || hasGratitudeChange || hasHighlightChange || hasQuoteChange || hasContentChange)
+	}, [moods, gratitude, highlights, quote, content, initialData])
 
 	async function handleSave() {
 		setIsSaving(true)
@@ -89,6 +129,14 @@ export default function Journal() {
 			toast.error(result.error)
 		} else {
 			toast.success("Journal entry saved!")
+			// Update initial data to match current state
+			setInitialData({
+				moods,
+				gratitude,
+				highlights,
+				quote,
+				content,
+			})
 			setHasChanges(false)
 		}
 	}
@@ -163,7 +211,11 @@ export default function Journal() {
 								→
 							</Button>
 						</div>
-						<Button onClick={handleSave} disabled={isSaving || !hasChanges}>
+						<Button 
+							onClick={handleSave} 
+							disabled={isSaving || !hasChanges}
+							className={!isSaving && hasChanges ? "cursor-pointer" : ""}
+						>
 							{isSaving ? (
 								<>
 									<Loader2 className="mr-2 size-4 animate-spin" />

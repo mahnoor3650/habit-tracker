@@ -100,7 +100,7 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 	const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i)
 
 	return (
-		<Card className="p-3">
+		<Card className="p-3 max-w-2xl mx-auto">
 			{/* Month Navigation */}
 			<div className="flex items-center justify-between mb-3">
 				<div className="flex items-center gap-2">
@@ -168,16 +168,16 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 			) : (
 				<div className="space-y-1">
 					{/* Day Headers */}
-					<div className="grid grid-cols-7 gap-0.5">
+					<div className="grid grid-cols-7 gap-0.5 max-w-[500px] mx-auto">
 						{dayNames.map((day) => (
-							<div key={day} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">
+							<div key={day} className="text-center text-[12px] font-medium text-muted-foreground py-0.5">
 								{day}
 							</div>
 						))}
 					</div>
 
 					{/* Calendar Grid */}
-					<div className="grid grid-cols-7 gap-0.5">
+					<div className="grid grid-cols-7 gap-0.5 max-w-[500px] mx-auto">
 						{/* Previous month's trailing days */}
 						{Array.from({ length: startingDayOfWeek }).map((_, idx) => {
 							const day = daysInPrevMonth - startingDayOfWeek + idx + 1
@@ -186,7 +186,7 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 									key={`prev-${day}`}
 									className="aspect-square p-0 text-muted-foreground/30 cursor-not-allowed"
 								>
-									<div className="h-full flex items-center justify-center text-[9px]">
+									<div className="h-full flex items-center justify-center text-[10px]">
 										{day}
 									</div>
 								</div>
@@ -215,13 +215,13 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 									`}
 								>
 									<div className="h-full flex flex-col items-center justify-center gap-0">
-										<span className={`text-[9px] font-medium ${isToday ? "text-primary font-bold" : ""}`}>
+										<span className={`text-[10px] font-medium ${isToday ? "text-primary font-bold" : ""}`}>
 											{day}
 										</span>
 										{hasEntry && (
 											<div className="flex items-center gap-0">
 												{moods.length > 0 ? (
-													<span className="text-[7px] leading-none">{moods[0]}</span>
+													<span className="text-[14px] leading-none">{moods[0]}</span>
 												) : (
 													<div className="size-0.5 rounded-full bg-primary" />
 												)}
@@ -240,7 +240,7 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 									key={`next-${day}`}
 									className="aspect-square p-0 text-muted-foreground/30 cursor-not-allowed"
 								>
-									<div className="h-full flex items-center justify-center text-[9px]">
+									<div className="h-full flex items-center justify-center text-[10px]">
 										{day}
 									</div>
 								</div>
