@@ -39,7 +39,7 @@ export function Header() {
 	return (
 		<header className="w-full border-b bg-card/50 backdrop-blur-sm">
 			<div className="w-full px-16 h-16 flex items-center justify-between">
-				<h1 className="font-semibold">Habit Tracker</h1>
+				<h1 className="font-semibold">Habit Pilot</h1>
 				<div className="flex items-center gap-2">
 					<Button variant="ghost" size="icon" onClick={toggle} title="Toggle theme">
 						{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}

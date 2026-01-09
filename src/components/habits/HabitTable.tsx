@@ -2,18 +2,55 @@ import { useEffect, useState } from "react"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, CalendarDays } from "lucide-react"
+import { Loader2, CalendarDays, GripVertical } from "lucide-react"
 import * as icons from "lucide-react"
 import { toast } from "sonner"
+import {
+	DndContext,
+	closestCenter,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core"
+import type { DragEndEvent } from "@dnd-kit/core"
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
-export type ViewMode = "week" | "15days" | "month"
+export type ViewMode = "week" | "15days" | "month" | "custom"
 
 type HabitTableProps = {
 	onHabitClick: (habit: Habit) => void
 	view: ViewMode
+	dates?: Date[]
+	startDate?: string
+	endDate?: string
+	onReorder?: (habitIds: string[]) => void
 }
 
-function getDatesForView(view: ViewMode): Date[] {
+function getDatesForView(view: ViewMode, customDates?: Date[], startDateStr?: string, endDateStr?: string): Date[] {
+	if (customDates && customDates.length > 0) {
+		return customDates
+	}
+	
+	if (view === "custom" && startDateStr && endDateStr) {
+		const start = new Date(startDateStr)
+		const end = new Date(endDateStr)
+		const dates: Date[] = []
+		const current = new Date(start)
+		while (current <= end) {
+			dates.push(new Date(current))
+			current.setDate(current.getDate() + 1)
+		}
+		return dates
+	}
+	
 	const now = new Date()
 	const dates: Date[] = []
 
@@ -51,6 +88,101 @@ function getDatesForView(view: ViewMode): Date[] {
 	return dates
 }
 
+function SortableHabitRow({
+	habit,
+	dates,
+	entriesMap,
+	today,
+	onHabitClick,
+	onToggle,
+	getIcon,
+	index,
+}: {
+	habit: Habit
+	dates: Date[]
+	entriesMap: Record<string, Record<string, boolean>>
+	today: string
+	onHabitClick: (habit: Habit) => void
+	onToggle: (habitId: string, date: string, e: React.MouseEvent) => void
+	getIcon: (iconName?: string | null) => React.ReactNode
+	index: number
+}) {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: habit.id,
+	})
+
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+		opacity: isDragging ? 0.5 : 1,
+	}
+
+	return (
+		<tr
+			ref={setNodeRef}
+			style={style}
+			className={`border-b hover:bg-accent/30 cursor-pointer transition-colors ${
+				index % 2 === 1 ? "bg-muted/10" : ""
+			} ${isDragging ? "z-50" : ""}`}
+			onClick={() => onHabitClick(habit)}
+		>
+			<td className="p-5 sticky left-0 bg-card hover:bg-accent/30 z-10 border-r transition-colors">
+				<div className="flex items-center gap-4">
+					<button
+						{...attributes}
+						{...listeners}
+						className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors p-1 -ml-1"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<GripVertical className="size-4" />
+					</button>
+					<div className="size-12 rounded-lg flex items-center justify-center bg-primary/10 shrink-0">
+						{getIcon(habit.icon) || <span className="text-2xl">📅</span>}
+					</div>
+					<div>
+						<div className="font-medium text-base">{habit.name}</div>
+						{habit.description && (
+							<div className="text-sm text-muted-foreground mt-0.5">
+								{habit.description}
+							</div>
+						)}
+					</div>
+				</div>
+			</td>
+			{dates.map((date) => {
+				const dateStr = formatDateISO(date)
+				const isChecked = entriesMap[habit.id]?.[dateStr] ?? false
+				const isToday = dateStr === today
+				const isWeekend = date.getDay() === 0 || date.getDay() === 6
+				return (
+					<td
+						key={dateStr}
+						className={`p-4 text-center transition-colors ${
+							isToday
+								? "bg-primary/15"
+								: isWeekend
+								? "bg-muted/20"
+								: ""
+						}`}
+						onClick={(e) => onToggle(habit.id, dateStr, e)}
+					>
+						<div className="flex items-center justify-center">
+							<Checkbox
+								checked={isChecked}
+								className={`cursor-pointer size-6 rounded-md transition-all ${
+									isChecked
+										? "bg-primary border-primary data-[state=checked]:bg-primary"
+										: "border-2 border-muted-foreground/30 hover:border-primary/50"
+								}`}
+							/>
+						</div>
+					</td>
+				)
+			})}
+		</tr>
+	)
+}
+
 function formatDateISO(date: Date): string {
 	return date.toISOString().slice(0, 10)
 }
@@ -63,65 +195,104 @@ function formatDayHeader(date: Date): string {
 	return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
 }
 
-export function HabitTable({ onHabitClick, view }: HabitTableProps) {
-	const { habits, loading, getEntriesForHabit, toggleHabitEntry } = useHabits()
+export function HabitTable({ onHabitClick, view, dates: customDates, startDate, endDate, onReorder }: HabitTableProps) {
+	const { habits, loading, getEntriesForHabit, toggleHabitEntry, reorderHabits } = useHabits()
 	const [entriesMap, setEntriesMap] = useState<Record<string, Record<string, boolean>>>({})
 	const [loadingEntries, setLoadingEntries] = useState(true)
+	const [sortedHabits, setSortedHabits] = useState<Habit[]>([])
 
-	const dates = getDatesForView(view)
+	const dates = getDatesForView(view, customDates, startDate, endDate)
 	const today = formatDateISO(new Date())
+
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		})
+	)
+
+	useEffect(() => {
+		setSortedHabits(habits)
+	}, [habits])
 
 	useEffect(() => {
 		async function loadEntries() {
 			setLoadingEntries(true)
 			const map: Record<string, Record<string, boolean>> = {}
 			
-			// Calculate start date based on view
-			let startDate: string | undefined
-			let daysToFetch: number
+			// Calculate start and end dates
+			let startDateISO: string | undefined
+			let endDateISO: string | undefined
 			
-			if (view === "month") {
-				// For month view, fetch from the first day of the current month
-				const now = new Date()
-				startDate = formatDateISO(new Date(now.getFullYear(), now.getMonth(), 1))
-				daysToFetch = 31
-			} else if (view === "week") {
-				// For week view, fetch from the first day of the current week (Sunday)
-				const now = new Date()
-				const currentDay = now.getDay() // 0 = Sunday, 6 = Saturday
-				const startOfWeek = new Date(now)
-				startOfWeek.setDate(now.getDate() - currentDay) // Go back to Sunday
-				startOfWeek.setHours(0, 0, 0, 0)
-				startDate = formatDateISO(startOfWeek)
-				daysToFetch = 7
-			} else if (view === "15days") {
-				// For 15 days view, fetch from today
-				const today = new Date()
-				today.setHours(0, 0, 0, 0)
-				startDate = formatDateISO(today)
-				daysToFetch = 15
+			if (view === "custom" && startDate && endDate) {
+				startDateISO = startDate
+				endDateISO = endDate
+			} else if (dates.length > 0) {
+				startDateISO = formatDateISO(dates[0])
+				endDateISO = formatDateISO(dates[dates.length - 1])
 			} else {
-				daysToFetch = 7
+				// Fallback to default calculation
+				const now = new Date()
+				if (view === "month") {
+					startDateISO = formatDateISO(new Date(now.getFullYear(), now.getMonth(), 1))
+					endDateISO = formatDateISO(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+				} else if (view === "week") {
+					const currentDay = now.getDay()
+					const startOfWeek = new Date(now)
+					startOfWeek.setDate(now.getDate() - currentDay)
+					startOfWeek.setHours(0, 0, 0, 0)
+					startDateISO = formatDateISO(startOfWeek)
+					const endOfWeek = new Date(startOfWeek)
+					endOfWeek.setDate(startOfWeek.getDate() + 6)
+					endDateISO = formatDateISO(endOfWeek)
+				} else if (view === "15days") {
+					const today = new Date(now)
+					today.setHours(0, 0, 0, 0)
+					startDateISO = formatDateISO(today)
+					const end = new Date(today)
+					end.setDate(today.getDate() + 14)
+					endDateISO = formatDateISO(end)
+				}
 			}
 			
-			for (const habit of habits) {
-				// Fetch entries for the specific date range
-				const { data } = await getEntriesForHabit(habit.id, daysToFetch, startDate)
-				map[habit.id] = data ?? {}
+			if (startDateISO && endDateISO) {
+				for (const habit of sortedHabits) {
+					const { data } = await getEntriesForHabit(habit.id, dates.length, startDateISO, endDateISO)
+					map[habit.id] = data ?? {}
+				}
 			}
 			setEntriesMap(map)
 			setLoadingEntries(false)
 		}
-		if (habits.length > 0) {
+		if (sortedHabits.length > 0 && dates.length > 0) {
 			loadEntries()
 		} else {
 			setLoadingEntries(false)
 		}
-	}, [habits, getEntriesForHabit, view])
+	}, [sortedHabits, getEntriesForHabit, view, dates, startDate, endDate])
+
+	async function handleDragEnd(event: DragEndEvent) {
+		const { active, over } = event
+		
+		if (over && active.id !== over.id) {
+			const oldIndex = sortedHabits.findIndex((h) => h.id === active.id)
+			const newIndex = sortedHabits.findIndex((h) => h.id === over.id)
+			
+			const newHabits = arrayMove(sortedHabits, oldIndex, newIndex)
+			setSortedHabits(newHabits)
+			
+			const habitIds = newHabits.map((h) => h.id)
+			if (onReorder) {
+				onReorder(habitIds)
+			} else {
+				await reorderHabits(habitIds)
+			}
+		}
+	}
 
 	async function handleToggle(habitId: string, date: string, e: React.MouseEvent) {
 		e.stopPropagation()
-		const habit = habits.find((h) => h.id === habitId)
+		const habit = sortedHabits.find((h) => h.id === habitId)
 		const wasChecked = entriesMap[habitId]?.[date] || false
 		const result = await toggleHabitEntry(habitId, date)
 		
@@ -169,7 +340,7 @@ export function HabitTable({ onHabitClick, view }: HabitTableProps) {
 		)
 	}
 
-	if (habits.length === 0) {
+	if (sortedHabits.length === 0) {
 		return (
 			<div className="text-center py-16 bg-card rounded-xl border">
 				<CalendarDays className="size-12 mx-auto text-muted-foreground mb-4" />
@@ -179,104 +350,71 @@ export function HabitTable({ onHabitClick, view }: HabitTableProps) {
 	}
 
 	return (
-		<div className="space-y-4">
-			{/* Table */}
-			<div className="w-full overflow-x-auto border rounded-xl bg-card shadow-sm">
-				<table className="w-full border-collapse">
-					<thead>
-						<tr className="border-b bg-muted/30">
-							<th className="text-left p-5 font-semibold sticky left-0 bg-muted/30 z-10 min-w-[280px] border-r">
-								Habit
-							</th>
-							{dates.map((date) => {
-								const dateStr = formatDateISO(date)
-								const isToday = dateStr === today
-								const isWeekend = date.getDay() === 0 || date.getDay() === 6
-								return (
-									<th
-										key={dateStr}
-										className={`p-4 text-center font-normal min-w-[60px] transition-colors ${
-											isToday
-												? "bg-primary/15"
-												: isWeekend
-												? "bg-muted/20"
-												: ""
-										}`}
-									>
-										<div className="flex flex-col items-center gap-1">
-											<span className={`text-xs ${isWeekend ? "text-primary/70" : "text-muted-foreground"}`}>
-												{formatDayHeader(date)}
-											</span>
-											<span className={`text-sm ${isToday ? "font-bold text-primary" : ""}`}>
-												{formatDayShort(date)}
-											</span>
-										</div>
-									</th>
-								)
-							})}
-						</tr>
-					</thead>
-					<tbody>
-						{habits.map((habit, idx) => (
-							<tr
-								key={habit.id}
-								className={`border-b hover:bg-accent/30 cursor-pointer transition-colors ${
-									idx % 2 === 1 ? "bg-muted/10" : ""
-								}`}
-								onClick={() => onHabitClick(habit)}
-							>
-								<td className="p-5 sticky left-0 bg-card hover:bg-accent/30 z-10 border-r transition-colors">
-									<div className="flex items-center gap-4">
-										<div className="size-12 rounded-lg flex items-center justify-center bg-primary/10 shrink-0">
-											{getIcon(habit.icon) || (
-												<span className="text-2xl">📅</span>
-											)}
-										</div>
-										<div>
-											<div className="font-medium text-base">{habit.name}</div>
-											{habit.description && (
-												<div className="text-sm text-muted-foreground mt-0.5">
-													{habit.description}
-												</div>
-											)}
-										</div>
-									</div>
-								</td>
+		<DndContext
+			sensors={sensors}
+			collisionDetection={closestCenter}
+			onDragEnd={handleDragEnd}
+		>
+			<div className="space-y-4">
+				{/* Table */}
+				<div className="w-full overflow-x-auto border rounded-xl bg-card shadow-sm">
+					<table className="w-full border-collapse">
+						<thead>
+							<tr className="border-b bg-muted/30">
+								<th className="text-left p-5 font-semibold sticky left-0 bg-muted/30 z-10 min-w-[300px] border-r">
+									Habit
+								</th>
 								{dates.map((date) => {
 									const dateStr = formatDateISO(date)
-									const isChecked = entriesMap[habit.id]?.[dateStr] ?? false
 									const isToday = dateStr === today
 									const isWeekend = date.getDay() === 0 || date.getDay() === 6
 									return (
-										<td
+										<th
 											key={dateStr}
-											className={`p-4 text-center transition-colors ${
+											className={`p-4 text-center font-normal min-w-[60px] transition-colors ${
 												isToday
 													? "bg-primary/15"
 													: isWeekend
 													? "bg-muted/20"
 													: ""
 											}`}
-											onClick={(e) => handleToggle(habit.id, dateStr, e)}
 										>
-											<div className="flex items-center justify-center">
-												<Checkbox
-													checked={isChecked}
-													className={`cursor-pointer size-6 rounded-md transition-all ${
-														isChecked
-															? "bg-primary border-primary data-[state=checked]:bg-primary"
-															: "border-2 border-muted-foreground/30 hover:border-primary/50"
-													}`}
-												/>
+											<div className="flex flex-col items-center gap-1">
+												<span className={`text-xs ${isWeekend ? "text-primary/70" : "text-muted-foreground"}`}>
+													{formatDayHeader(date)}
+												</span>
+												<span className={`text-sm ${isToday ? "font-bold text-primary" : ""}`}>
+													{formatDayShort(date)}
+												</span>
 											</div>
-										</td>
+										</th>
 									)
 								})}
 							</tr>
-						))}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							<SortableContext
+								items={sortedHabits.map((h) => h.id)}
+								strategy={verticalListSortingStrategy}
+							>
+								{sortedHabits.map((habit, idx) => (
+									<SortableHabitRow
+										key={habit.id}
+										habit={habit}
+										dates={dates}
+										entriesMap={entriesMap}
+										today={today}
+										onHabitClick={onHabitClick}
+										onToggle={handleToggle}
+										getIcon={getIcon}
+										index={idx}
+									/>
+								))}
+							</SortableContext>
+						</tbody>
+					</table>
+				</div>
 			</div>
-		</div>
+		</DndContext>
 	)
 }

@@ -9,6 +9,7 @@ export type Habit = {
 	description?: string | null
 	color?: string | null
 	icon?: string | null
+	order?: number | null
 	created_at?: string
 	updated_at?: string
 }
@@ -48,6 +49,91 @@ export function calculateCompletionPercent(entriesByDate: Record<string, boolean
 	return Math.round((completed / days.length) * 100)
 }
 
+export function calculateConsistencyScore(entriesByDate: Record<string, boolean>, days: number = 30): number {
+	const dates = getLastNDates(days)
+	if (dates.length === 0) return 0
+	
+	const completed = dates.filter((d) => entriesByDate[d]).length
+	const total = dates.length
+	
+	// Calculate variance in completion patterns
+	const dayOfWeekCounts: Record<number, { total: number; completed: number }> = {}
+	dates.forEach((dateStr) => {
+		const date = new Date(dateStr)
+		const dayOfWeek = date.getDay()
+		if (!dayOfWeekCounts[dayOfWeek]) {
+			dayOfWeekCounts[dayOfWeek] = { total: 0, completed: 0 }
+		}
+		dayOfWeekCounts[dayOfWeek].total++
+		if (entriesByDate[dateStr]) {
+			dayOfWeekCounts[dayOfWeek].completed++
+		}
+	})
+	
+	// Calculate consistency: lower variance = higher consistency
+	const dayCompletionRates = Object.values(dayOfWeekCounts).map(
+		(d) => d.total > 0 ? d.completed / d.total : 0
+	)
+	
+	if (dayCompletionRates.length === 0) return 0
+	
+	const avgRate = dayCompletionRates.reduce((a, b) => a + b, 0) / dayCompletionRates.length
+	const variance = dayCompletionRates.reduce((sum, rate) => sum + Math.pow(rate - avgRate, 2), 0) / dayCompletionRates.length
+	
+	// Consistency score: 0-100, higher is more consistent
+	// Base score from completion rate (70% weight) + consistency bonus (30% weight)
+	const completionScore = (completed / total) * 70
+	const consistencyBonus = Math.max(0, (1 - variance) * 30)
+	
+	return Math.round(completionScore + consistencyBonus)
+}
+
+export function getBestWorstDays(entriesByDate: Record<string, boolean>, startDate?: string, endDate?: string): { best: number[]; worst: number[] } {
+	let dates: string[]
+	if (startDate && endDate) {
+		const start = new Date(startDate)
+		const end = new Date(endDate)
+		dates = []
+		const current = new Date(start)
+		while (current <= end) {
+			dates.push(current.toISOString().slice(0, 10))
+			current.setDate(current.getDate() + 1)
+		}
+	} else {
+		dates = getLastNDates(30)
+	}
+	const dayOfWeekCounts: Record<number, { total: number; completed: number }> = {}
+	
+	dates.forEach((dateStr) => {
+		const date = new Date(dateStr)
+		const dayOfWeek = date.getDay()
+		if (!dayOfWeekCounts[dayOfWeek]) {
+			dayOfWeekCounts[dayOfWeek] = { total: 0, completed: 0 }
+		}
+		dayOfWeekCounts[dayOfWeek].total++
+		if (entriesByDate[dateStr]) {
+			dayOfWeekCounts[dayOfWeek].completed++
+		}
+	})
+	
+	const dayRates: Array<{ day: number; rate: number }> = []
+	for (let day = 0; day < 7; day++) {
+		const counts = dayOfWeekCounts[day] || { total: 0, completed: 0 }
+		const rate = counts.total > 0 ? counts.completed / counts.total : 0
+		dayRates.push({ day, rate })
+	}
+	
+	dayRates.sort((a, b) => b.rate - a.rate)
+	
+	const bestRate = dayRates[0]?.rate ?? 0
+	const worstRate = dayRates[dayRates.length - 1]?.rate ?? 0
+	
+	const best = dayRates.filter((d) => Math.abs(d.rate - bestRate) < 0.01).map((d) => d.day)
+	const worst = dayRates.filter((d) => Math.abs(d.rate - worstRate) < 0.01).map((d) => d.day)
+	
+	return { best, worst }
+}
+
 type HabitsContextValue = {
 	habits: Habit[]
 	loading: boolean
@@ -56,7 +142,8 @@ type HabitsContextValue = {
 	createHabit: (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null }) => Promise<{ data?: Habit; error?: string }>
 	updateHabit: (id: string, updates: Partial<Omit<Habit, "id" | "user_id">>) => Promise<{ data?: Habit; error?: string }>
 	deleteHabit: (id: string) => Promise<{ error?: string }>
-	getEntriesForHabit: (habitId: string, days?: number, startDateISO?: string) => Promise<{ data?: Record<string, boolean>; error?: string }>
+	reorderHabits: (habitIds: string[]) => Promise<{ error?: string }>
+	getEntriesForHabit: (habitId: string, days?: number, startDateISO?: string, endDateISO?: string) => Promise<{ data?: Record<string, boolean>; error?: string }>
 	toggleHabitEntry: (habitId: string, dateISO: string) => Promise<{ error?: string }>
 	getHabitStreak: (habitId: string) => Promise<{ data?: number; error?: string }>
 }
@@ -79,6 +166,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 			.from("habits")
 			.select("*")
 			.eq("user_id", userId)
+			.order("order", { ascending: true, nullsFirst: false })
 			.order("created_at", { ascending: true })
 		setLoading(false)
 		if (error) {
@@ -95,9 +183,19 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 	const createHabit = useCallback(
 		async (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null }) => {
 			if (!userId) return { error: "Not authenticated" }
+			// Get max order value for this user
+			const { data: existingHabits } = await supabase
+				.from("habits")
+				.select("order")
+				.eq("user_id", userId)
+				.order("order", { ascending: false, nullsFirst: false })
+				.limit(1)
+				.single()
+			
+			const maxOrder = existingHabits?.order ?? -1
 			const { data, error } = await supabase
 				.from("habits")
-				.insert([{ user_id: userId, ...payload }])
+				.insert([{ user_id: userId, ...payload, order: maxOrder + 1 }])
 				.select("*")
 				.single()
 			if (error) return { error: error.message }
@@ -121,7 +219,31 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 		return {}
 	}, [])
 
-	const getEntriesForHabit = useCallback(async (habitId: string, days = 30, startDateISO?: string) => {
+	const reorderHabits = useCallback(async (habitIds: string[]) => {
+		// Update order for all habits in the new order
+		const updates = habitIds.map((id, index) => ({
+			id,
+			order: index,
+		}))
+		
+		for (const update of updates) {
+			const { error } = await supabase
+				.from("habits")
+				.update({ order: update.order })
+				.eq("id", update.id)
+			if (error) return { error: error.message }
+		}
+		
+		// Update local state
+		setHabits((prev) => {
+			const habitMap = new Map(prev.map((h) => [h.id, h]))
+			return habitIds.map((id) => habitMap.get(id)!).filter(Boolean)
+		})
+		
+		return {}
+	}, [])
+
+	const getEntriesForHabit = useCallback(async (habitId: string, days = 30, startDateISO?: string, endDateISO?: string) => {
 		let startDate: string
 		if (startDateISO) {
 			// Use the provided start date (e.g., first day of current month)
@@ -130,11 +252,18 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 			// Default: get last N days from today
 			startDate = getLastNDates(days)[0]
 		}
-		const { data, error } = await supabase
+		
+		let query = supabase
 			.from("habit_entries")
 			.select("*")
 			.eq("habit_id", habitId)
 			.gte("date", startDate)
+		
+		if (endDateISO) {
+			query = query.lte("date", endDateISO)
+		}
+		
+		const { data, error } = await query
 		if (error) return { error: error.message }
 		const map: Record<string, boolean> = {}
 		for (const entry of data ?? []) {
@@ -184,6 +313,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 			createHabit,
 			updateHabit,
 			deleteHabit,
+			reorderHabits,
 			getEntriesForHabit,
 			toggleHabitEntry,
 			getHabitStreak,
@@ -196,6 +326,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 			createHabit,
 			updateHabit,
 			deleteHabit,
+			reorderHabits,
 			getEntriesForHabit,
 			toggleHabitEntry,
 			getHabitStreak,
