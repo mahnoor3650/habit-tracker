@@ -3,7 +3,6 @@ import { useAuth } from "@/lib/hooks/useAuth"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
 import { HabitTable } from "@/components/habits/HabitTable"
-import { HabitAnalytics } from "@/components/habits/HabitAnalytics"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { HabitForm, type HabitFormValues } from "@/components/habits/HabitForm"
@@ -320,9 +319,6 @@ export default function Dashboard() {
 				endDate={dateRange.endDate}
 				onReorder={handleReorder}
 			/>
-
-			{/* Analytics Section */}
-			<HabitAnalytics startDate={dateRange.startDate} endDate={dateRange.endDate} />
 
 			{/* Edit Dialog */}
 			<Dialog open={editOpen} onOpenChange={setEditOpen}>

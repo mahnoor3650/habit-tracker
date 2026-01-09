@@ -11,9 +11,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, User, LogOut } from "lucide-react"
+import { Moon, Sun, User, LogOut, BookOpen, Calendar } from "lucide-react"
 import { ProfileDialog } from "@/components/auth/ProfileDialog"
-import { useLocation } from "react-router-dom"
+import { useLocation, Link } from "react-router-dom"
 
 export function Header() {
 	const { theme, toggle } = useTheme()
@@ -36,11 +36,40 @@ export function Header() {
 		return email[0].toUpperCase()
 	}
 
+	const isJournalPage = location.pathname.startsWith("/journal")
+	const isDashboardPage = location.pathname === "/"
+
 	return (
 		<header className="w-full border-b bg-card/50 backdrop-blur-sm">
 			<div className="w-full px-16 h-16 flex items-center justify-between">
-				<h1 className="font-semibold">Habit Pilot</h1>
+				<Link to="/" className="font-semibold hover:opacity-80 transition-opacity">
+					Habit Pilot
+				</Link>
 				<div className="flex items-center gap-2">
+					{!isLoginPage && (
+						<nav className="flex items-center gap-1 mr-4">
+							<Button
+								asChild
+								variant={isDashboardPage ? "secondary" : "ghost"}
+								size="sm"
+							>
+								<Link to="/">
+									<Calendar className="mr-2 size-4" />
+									Habits
+								</Link>
+							</Button>
+							<Button
+								asChild
+								variant={isJournalPage ? "secondary" : "ghost"}
+								size="sm"
+							>
+								<Link to="/journal">
+									<BookOpen className="mr-2 size-4" />
+									Journal
+								</Link>
+							</Button>
+						</nav>
+					)}
 					<Button variant="ghost" size="icon" onClick={toggle} title="Toggle theme">
 						{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
 					</Button>
