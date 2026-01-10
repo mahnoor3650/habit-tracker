@@ -9,6 +9,7 @@ export type Habit = {
 	description?: string | null
 	color?: string | null
 	icon?: string | null
+	category?: string | null
 	order?: number | null
 	created_at?: string
 	updated_at?: string
@@ -139,7 +140,7 @@ type HabitsContextValue = {
 	loading: boolean
 	error: string | null
 	refresh: () => Promise<void>
-	createHabit: (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null }) => Promise<{ data?: Habit; error?: string }>
+	createHabit: (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null; category?: string | null }) => Promise<{ data?: Habit; error?: string }>
 	updateHabit: (id: string, updates: Partial<Omit<Habit, "id" | "user_id">>) => Promise<{ data?: Habit; error?: string }>
 	deleteHabit: (id: string) => Promise<{ error?: string }>
 	reorderHabits: (habitIds: string[]) => Promise<{ error?: string }>
@@ -181,7 +182,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 	}, [fetchHabits])
 
 	const createHabit = useCallback(
-		async (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null }) => {
+		async (payload: { name: string; description?: string | null; color?: string | null; icon?: string | null; category?: string | null }) => {
 			if (!userId) return { error: "Not authenticated" }
 			// Get max order value for this user
 			const { data: existingHabits } = await supabase

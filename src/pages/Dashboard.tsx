@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react"
-import { useAuth } from "@/lib/hooks/useAuth"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
 import { HabitTable } from "@/components/habits/HabitTable"
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Trash, Calendar, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CalendarCheck } from "lucide-react"
+import { Plus, Trash, Calendar, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CalendarCheck, Filter } from "lucide-react"
 import { toast } from "sonner"
 
 type ViewMode = "week" | "15days" | "month" | "custom"
@@ -69,8 +68,7 @@ function getDatesForView(view: ViewMode, offset: number = 0, customStart?: strin
 }
 
 export default function Dashboard() {
-	const { user } = useAuth()
-	const { updateHabit, createHabit, deleteHabit, refresh, reorderHabits } = useHabits()
+	const { habits, updateHabit, createHabit, deleteHabit, refresh, reorderHabits } = useHabits()
 	const [createOpen, setCreateOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 	const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
@@ -79,6 +77,7 @@ export default function Dashboard() {
 	const [customStartDate, setCustomStartDate] = useState<string>("")
 	const [customEndDate, setCustomEndDate] = useState<string>("")
 	const [customDateOpen, setCustomDateOpen] = useState(false)
+	const [selectedCategory, setSelectedCategory] = useState<string>("all")
 
 	async function handleCreate(values: HabitFormValues) {
 		const result = await createHabit(values)
@@ -179,185 +178,237 @@ export default function Dashboard() {
 		return ""
 	}, [view, dateOffset, dateRange, customStartDate, customEndDate])
 
+	// Get unique categories from habits
+	const availableCategories = useMemo(() => {
+		const categories = new Set<string>()
+		habits.forEach((habit) => {
+			if (habit.category) {
+				categories.add(habit.category)
+			}
+		})
+		return Array.from(categories).sort()
+	}, [habits])
+
+	// Filter habits by category
+	const filteredHabits = useMemo(() => {
+		if (selectedCategory === "all") {
+			return habits
+		}
+		return habits.filter((habit) => habit.category === selectedCategory)
+	}, [habits, selectedCategory])
+
 	return (
-		<div className="w-full px-16 py-8 space-y-8">
-			<header className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-semibold">Your Habits</h1>
-					<p className="text-sm text-muted-foreground">
-						{(user?.user_metadata?.display_name as string | undefined) ?? user?.email}
-					</p>
-				</div>
-				<div className="flex items-center gap-3">
-					<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-						<DialogTrigger asChild>
-							<Button>
-								<Plus className="mr-2 size-4" />
-								Add Habit
-							</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>New Habit</DialogTitle>
-							</DialogHeader>
-							<HabitForm onSubmit={handleCreate} submitLabel="Create" />
-						</DialogContent>
-					</Dialog>
-				</div>
-			</header>
+    <div className="w-full px-16 py-8 space-y-8">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Your Habits</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 size-4" />
+                Add Habit
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Habit</DialogTitle>
+              </DialogHeader>
+              <HabitForm onSubmit={handleCreate} submitLabel="Create" />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </header>
 
-			{/* Date Navigation */}
-			<div className="flex items-center justify-between gap-4">
-				<div className="flex items-center gap-2">
-					<Select value={view} onValueChange={(value) => {
-						setView(value as ViewMode)
-						setDateOffset(0)
-						if (value !== "custom") {
-							setCustomStartDate("")
-							setCustomEndDate("")
-						}
-					}}>
-						<SelectTrigger className="w-[140px]">
-							<SelectValue>
-								<div className="flex items-center gap-2">
-									{view === "week" && <Calendar className="size-4" />}
-									{view === "15days" && <CalendarRange className="size-4" />}
-									{view === "month" && <CalendarDays className="size-4" />}
-									{view === "custom" && <CalendarCheck className="size-4" />}
-									<span>
-										{view === "week" ? "Week" : view === "15days" ? "15 Days" : view === "month" ? "Month" : "Custom"}
-									</span>
-								</div>
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="week">
-								<div className="flex items-center gap-2">
-									<Calendar className="size-4" />
-									Week
-								</div>
-							</SelectItem>
-							<SelectItem value="15days">
-								<div className="flex items-center gap-2">
-									<CalendarRange className="size-4" />
-									15 Days
-								</div>
-							</SelectItem>
-							<SelectItem value="month">
-								<div className="flex items-center gap-2">
-									<CalendarDays className="size-4" />
-									Month
-								</div>
-							</SelectItem>
-							<SelectItem value="custom">
-								<div className="flex items-center gap-2">
-									<CalendarCheck className="size-4" />
-									Custom Range
-								</div>
-							</SelectItem>
-						</SelectContent>
-					</Select>
-					
-					{view === "custom" && (
-						<Popover open={customDateOpen} onOpenChange={setCustomDateOpen}>
-							<PopoverTrigger asChild>
-								<Button variant="outline" className="w-[240px] justify-start text-left font-normal">
-									<CalendarCheck className="mr-2 size-4" />
-									{customStartDate && customEndDate ? dateRangeLabel : "Select date range"}
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-auto p-4" align="start">
-								<div className="space-y-4">
-									<div className="space-y-2">
-										<Label>Start Date</Label>
-										<Input
-											type="date"
-											value={customStartDate}
-											onChange={(e) => setCustomStartDate(e.target.value)}
-										/>
-									</div>
-									<div className="space-y-2">
-										<Label>End Date</Label>
-										<Input
-											type="date"
-											value={customEndDate}
-											onChange={(e) => setCustomEndDate(e.target.value)}
-										/>
-									</div>
-									<Button onClick={handleCustomDateRange} className="w-full">
-										Apply Range
-									</Button>
-								</div>
-							</PopoverContent>
-						</Popover>
-					)}
-				</div>
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-md text-muted-foreground">{dateRangeLabel}</div>
+        <div className="flex items-center gap-2">
+          {/* Category Filter */}
 
-				<div className="flex items-center gap-2">
-					<Button variant="outline" size="icon" onClick={handlePrevious}>
-						<ChevronLeft className="size-4" />
-					</Button>
-					<Button variant="outline" onClick={handleToday} className="min-w-[80px]">
-						Today
-					</Button>
-					<Button variant="outline" size="icon" onClick={handleNext}>
-						<ChevronRight className="size-4" />
-					</Button>
-				</div>
-			</div>
+          <Button variant="outline" size="icon" onClick={handlePrevious}>
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleToday}
+            className="min-w-[80px]"
+          >
+            Today
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleNext}>
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <Filter className="size-4" />
+                  <span>
+                    {selectedCategory === "all" ? "All" : selectedCategory}
+                  </span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                <div className="flex items-center gap-2">
+                  <Filter className="size-4" />
+                  All
+                </div>
+              </SelectItem>
+              {availableCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={view}
+            onValueChange={(value) => {
+              setView(value as ViewMode);
+              setDateOffset(0);
+              if (value !== "custom") {
+                setCustomStartDate("");
+                setCustomEndDate("");
+              }
+            }}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  {view === "week" && <Calendar className="size-4" />}
+                  {view === "15days" && <CalendarRange className="size-4" />}
+                  {view === "month" && <CalendarDays className="size-4" />}
+                  {view === "custom" && <CalendarCheck className="size-4" />}
+                  <span>
+                    {view === "week"
+                      ? "Week"
+                      : view === "15days"
+                      ? "15 Days"
+                      : view === "month"
+                      ? "Month"
+                      : "Custom"}
+                  </span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">
+                <div className="flex items-center gap-2">
+                  <Calendar className="size-4" />
+                  Week
+                </div>
+              </SelectItem>
+              <SelectItem value="15days">
+                <div className="flex items-center gap-2">
+                  <CalendarRange className="size-4" />
+                  15 Days
+                </div>
+              </SelectItem>
+              <SelectItem value="month">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="size-4" />
+                  Month
+                </div>
+              </SelectItem>
+              <SelectItem value="custom">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck className="size-4" />
+                  Custom Range
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-			{/* Date Range Label */}
-			<div className="text-sm text-muted-foreground">
-				{dateRangeLabel}
-			</div>
+          {view === "custom" && (
+            <Popover open={customDateOpen} onOpenChange={setCustomDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-[240px] justify-start text-left font-normal"
+                >
+                  <CalendarCheck className="mr-2 size-4" />
+                  {customStartDate && customEndDate
+                    ? dateRangeLabel
+                    : "Select date range"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4" align="start">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <Input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>End Date</Label>
+                    <Input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleCustomDateRange} className="w-full">
+                    Apply Range
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </div>
 
-			<HabitTable
-				onHabitClick={handleHabitClick}
-				view={view}
-				dates={dateRange.dates}
-				startDate={dateRange.startDate}
-				endDate={dateRange.endDate}
-				onReorder={handleReorder}
-			/>
+      <HabitTable
+        onHabitClick={handleHabitClick}
+        view={view}
+        dates={dateRange.dates}
+        startDate={dateRange.startDate}
+        endDate={dateRange.endDate}
+        onReorder={handleReorder}
+        habits={filteredHabits}
+      />
 
-			{/* Edit Dialog */}
-			<Dialog open={editOpen} onOpenChange={setEditOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Edit Habit</DialogTitle>
-					</DialogHeader>
-					{selectedHabit && (
-						<div className="space-y-4">
-							<HabitForm
-								initial={{
-									name: selectedHabit.name,
-									description: selectedHabit.description,
-									icon: selectedHabit.icon,
-								}}
-								onSubmit={handleUpdate}
-								submitLabel="Update"
-							/>
-							<div className="flex items-center justify-end gap-3 pt-2 border-t">
-								<Button
-									variant="destructive"
-									onClick={handleDelete}
-								>
-									<Trash className="mr-2 size-4" />
-									Delete
-								</Button>
-								<Button
-									type="submit"
-									form="habit-form"
-								>
-									Update
-								</Button>
-							</div>
-						</div>
-					)}
-				</DialogContent>
-			</Dialog>
-		</div>
-	)
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Habit</DialogTitle>
+          </DialogHeader>
+          {selectedHabit && (
+            <div className="space-y-4">
+              <HabitForm
+                initial={{
+                  name: selectedHabit.name,
+                  description: selectedHabit.description,
+                  icon: selectedHabit.icon,
+                  category: selectedHabit.category,
+                }}
+                onSubmit={handleUpdate}
+                submitLabel="Update"
+              />
+              <div className="flex items-center justify-end gap-3 pt-2 border-t">
+                <Button variant="destructive" onClick={handleDelete}>
+                  <Trash className="mr-2 size-4" />
+                  Delete
+                </Button>
+                <Button type="submit" form="habit-form">
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
 

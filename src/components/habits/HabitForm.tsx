@@ -8,6 +8,7 @@ export type HabitFormValues = {
 	name: string
 	description?: string | null
 	icon?: string | null
+	category?: string | null
 }
 
 export function HabitForm({
@@ -23,6 +24,7 @@ export function HabitForm({
 		name: initial?.name ?? "",
 		description: initial?.description ?? "",
 		icon: initial?.icon ?? null,
+		category: initial?.category ?? null,
 	})
 	const [loading, setLoading] = useState(false)
 
@@ -32,6 +34,7 @@ export function HabitForm({
 			name: initial?.name ?? "",
 			description: initial?.description ?? "",
 			icon: initial?.icon ?? null,
+			category: initial?.category ?? null,
 		})
 	}, [initial])
 
@@ -65,6 +68,15 @@ export function HabitForm({
 					placeholder="Add more details about this habit"
 					value={values.description ?? ""}
 					onChange={(e) => update("description", e.target.value)}
+				/>
+			</div>
+			<div className="space-y-2">
+				<Label htmlFor="category">Category (optional)</Label>
+				<Input
+					id="category"
+					placeholder="e.g., Health, Fitness, Learning"
+					value={values.category ?? ""}
+					onChange={(e) => update("category", e.target.value.trim() || null)}
 				/>
 			</div>
 			<div className="space-y-3">

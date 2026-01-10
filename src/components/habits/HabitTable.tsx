@@ -32,6 +32,7 @@ type HabitTableProps = {
 	startDate?: string
 	endDate?: string
 	onReorder?: (habitIds: string[]) => void
+	habits?: Habit[]
 }
 
 function getDatesForView(view: ViewMode, customDates?: Date[], startDateStr?: string, endDateStr?: string): Date[] {
@@ -195,8 +196,9 @@ function formatDayHeader(date: Date): string {
 	return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
 }
 
-export function HabitTable({ onHabitClick, view, dates: customDates, startDate, endDate, onReorder }: HabitTableProps) {
-	const { habits, loading, getEntriesForHabit, toggleHabitEntry, reorderHabits } = useHabits()
+export function HabitTable({ onHabitClick, view, dates: customDates, startDate, endDate, onReorder, habits: propHabits }: HabitTableProps) {
+	const { habits: contextHabits, loading, getEntriesForHabit, toggleHabitEntry, reorderHabits } = useHabits()
+	const habits = propHabits ?? contextHabits
 	const [entriesMap, setEntriesMap] = useState<Record<string, Record<string, boolean>>>({})
 	const [loadingEntries, setLoadingEntries] = useState(true)
 	const [sortedHabits, setSortedHabits] = useState<Habit[]>([])
@@ -362,7 +364,7 @@ export function HabitTable({ onHabitClick, view, dates: customDates, startDate, 
 						<thead>
 							<tr className="border-b bg-muted/30">
 								<th className="text-left p-5 font-semibold sticky left-0 bg-muted/30 z-10 min-w-[300px] border-r">
-									Habit
+									Habits
 								</th>
 								{dates.map((date) => {
 									const dateStr = formatDateISO(date)
