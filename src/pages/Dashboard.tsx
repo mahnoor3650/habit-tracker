@@ -1,7 +1,11 @@
 import { useState, useMemo } from "react"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
+import { useMetrics } from "@/lib/hooks/useMetrics"
+import type { Metric } from "@/lib/hooks/useMetrics"
 import { HabitTable } from "@/components/habits/HabitTable"
+import { MetricsTable } from "@/components/metrics/MetricsTable"
+import { MetricForm, type MetricFormValues } from "@/components/metrics/MetricForm"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { HabitForm, type HabitFormValues } from "@/components/habits/HabitForm"
@@ -69,9 +73,13 @@ function getDatesForView(view: ViewMode, offset: number = 0, customStart?: strin
 
 export default function Dashboard() {
 	const { habits, updateHabit, createHabit, deleteHabit, refresh, reorderHabits } = useHabits()
+	const { metrics, updateMetric, createMetric, deleteMetric, refresh: refreshMetrics, reorderMetrics } = useMetrics()
 	const [createOpen, setCreateOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 	const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
+	const [metricCreateOpen, setMetricCreateOpen] = useState(false)
+	const [metricEditOpen, setMetricEditOpen] = useState(false)
+	const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null)
 	const [view, setView] = useState<ViewMode>("15days")
 	const [dateOffset, setDateOffset] = useState(0)
 	const [customStartDate, setCustomStartDate] = useState<string>("")
@@ -124,6 +132,57 @@ export default function Dashboard() {
 
 	async function handleReorder(habitIds: string[]) {
 		const result = await reorderHabits(habitIds)
+		if (result.error) {
+			toast.error(result.error)
+		}
+	}
+
+	// Metric handlers
+	async function handleCreateMetric(values: MetricFormValues) {
+		const result = await createMetric(values)
+		if (result.error) {
+			toast.error(result.error)
+		} else {
+			toast.success("Metric created")
+			setMetricCreateOpen(false)
+			await refreshMetrics()
+		}
+	}
+
+	async function handleUpdateMetric(values: MetricFormValues) {
+		if (!selectedMetric) return
+		const result = await updateMetric(selectedMetric.id, values)
+		if (result.error) {
+			toast.error(result.error)
+		} else {
+			toast.success("Metric updated")
+			setMetricEditOpen(false)
+			setSelectedMetric(null)
+			await refreshMetrics()
+		}
+	}
+
+	async function handleDeleteMetric() {
+		if (!selectedMetric) return
+		if (!confirm("Delete this metric?")) return
+		const result = await deleteMetric(selectedMetric.id)
+		if (result.error) {
+			toast.error(result.error)
+		} else {
+			toast.success("Metric deleted")
+			setMetricEditOpen(false)
+			setSelectedMetric(null)
+			await refreshMetrics()
+		}
+	}
+
+	function handleMetricClick(metric: Metric) {
+		setSelectedMetric(metric)
+		setMetricEditOpen(true)
+	}
+
+	async function handleReorderMetrics(metricIds: string[]) {
+		const result = await reorderMetrics(metricIds)
 		if (result.error) {
 			toast.error(result.error)
 		}
@@ -376,7 +435,42 @@ export default function Dashboard() {
         habits={filteredHabits}
       />
 
-      {/* Edit Dialog */}
+      {/* Metrics Section */}
+      <div className="space-y-4">
+        <header className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Daily Metrics</h2>
+            <p className="text-sm text-muted-foreground">Track numeric values like sleep, water, steps, etc.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Dialog open={metricCreateOpen} onOpenChange={setMetricCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 size-4" />
+                  Add Metric
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New Metric</DialogTitle>
+                </DialogHeader>
+                <MetricForm onSubmit={handleCreateMetric} submitLabel="Create" />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </header>
+        <MetricsTable
+          onMetricClick={handleMetricClick}
+          view={view}
+          dates={dateRange.dates}
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+          onReorder={handleReorderMetrics}
+          metrics={metrics}
+        />
+      </div>
+
+      {/* Edit Habit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -400,6 +494,39 @@ export default function Dashboard() {
                   Delete
                 </Button>
                 <Button type="submit" form="habit-form">
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Metric Dialog */}
+      <Dialog open={metricEditOpen} onOpenChange={setMetricEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Metric</DialogTitle>
+          </DialogHeader>
+          {selectedMetric && (
+            <div className="space-y-4">
+              <MetricForm
+                initial={{
+                  name: selectedMetric.name,
+                  description: selectedMetric.description,
+                  unit: selectedMetric.unit,
+                  icon: selectedMetric.icon,
+                  color: selectedMetric.color,
+                }}
+                onSubmit={handleUpdateMetric}
+                submitLabel="Update"
+              />
+              <div className="flex items-center justify-end gap-3 pt-2 border-t">
+                <Button variant="destructive" onClick={handleDeleteMetric}>
+                  <Trash className="mr-2 size-4" />
+                  Delete
+                </Button>
+                <Button type="submit" form="metric-form">
                   Update
                 </Button>
               </div>
