@@ -96,7 +96,7 @@ function formatDayShort(date: Date): string {
 }
 
 function formatDayHeader(date: Date): string {
-	return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
+	return date.toLocaleDateString("en-US", { weekday: "long" })
 }
 
 function SortableMetricRow({
@@ -162,20 +162,20 @@ function SortableMetricRow({
 				return (
 					<td
 						key={dateStr}
-						className={`text-center p-2 ${
-							isToday ? "bg-primary/10" : isWeekend ? "bg-muted/10" : ""
+						className={`text-center p-4 min-w-[120px] transition-colors ${
+							isToday ? "bg-primary/15" : isWeekend ? "bg-muted/20" : ""
 						}`}
 					>
 						<Input
 							type="number"
-							step="0.1"
+							step="1"
 							min="0"
 							value={value || ""}
 							onChange={(e) => {
 								const newValue = parseFloat(e.target.value) || 0
 								onValueChange(metric.id, dateStr, newValue)
 							}}
-							className="w-20 h-8 text-center text-sm"
+							className="w-full h-8 text-center text-sm"
 							placeholder="0"
 						/>
 					</td>
@@ -333,7 +333,7 @@ export function MetricsTable({ onMetricClick, view, dates: customDates, startDat
 									return (
 										<th
 											key={dateStr}
-											className={`p-4 text-center font-normal min-w-[80px] transition-colors ${
+											className={`p-4 text-center font-normal min-w-[60px] transition-colors ${
 												isToday
 													? "bg-primary/15"
 													: isWeekend

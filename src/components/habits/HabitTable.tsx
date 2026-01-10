@@ -156,29 +156,25 @@ function SortableHabitRow({
 				const isToday = dateStr === today
 				const isWeekend = date.getDay() === 0 || date.getDay() === 6
 				return (
-					<td
-						key={dateStr}
-						className={`p-4 text-center transition-colors ${
-							isToday
-								? "bg-primary/15"
-								: isWeekend
-								? "bg-muted/20"
-								: ""
-						}`}
-						onClick={(e) => onToggle(habit.id, dateStr, e)}
-					>
-						<div className="flex items-center justify-center">
-							<Checkbox
-								checked={isChecked}
-								className={`cursor-pointer size-6 rounded-md transition-all ${
-									isChecked
-										? "bg-primary border-primary data-[state=checked]:bg-primary"
-										: "border-2 border-muted-foreground/30 hover:border-primary/50"
-								}`}
-							/>
-						</div>
-					</td>
-				)
+          <td
+            key={dateStr}
+            className={`p-4 text-center min-w-[150px] transition-colors ${
+              isToday ? "bg-primary/15" : isWeekend ? "bg-muted/20" : ""
+            }`}
+            onClick={(e) => onToggle(habit.id, dateStr, e)}
+          >
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={isChecked}
+                className={`cursor-pointer size-6 rounded-md transition-all ${
+                  isChecked
+                    ? "bg-primary border-primary data-[state=checked]:bg-primary"
+                    : "border-2 border-muted-foreground/30 hover:border-primary/50"
+                }`}
+              />
+            </div>
+          </td>
+        );
 			})}
 		</tr>
 	)
@@ -193,7 +189,7 @@ function formatDayShort(date: Date): string {
 }
 
 function formatDayHeader(date: Date): string {
-	return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
+	return date.toLocaleDateString("en-US", { weekday: "long" })
 }
 
 export function HabitTable({ onHabitClick, view, dates: customDates, startDate, endDate, onReorder, habits: propHabits }: HabitTableProps) {
@@ -373,7 +369,7 @@ export function HabitTable({ onHabitClick, view, dates: customDates, startDate, 
 									return (
 										<th
 											key={dateStr}
-											className={`p-4 text-center font-normal min-w-[60px] transition-colors ${
+											className={`p-4 text-center font-normal min-w-[120px] transition-colors ${
 												isToday
 													? "bg-primary/15"
 													: isWeekend
