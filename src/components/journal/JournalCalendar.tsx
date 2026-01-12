@@ -100,19 +100,19 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 	const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i)
 
 	return (
-		<Card className="p-3 max-w-2xl mx-auto">
+		<Card className="p-3 sm:p-4 max-w-2xl mx-auto">
 			{/* Month Navigation */}
-			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center gap-2">
+			<div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mb-3">
+				<div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
 					<Button variant="outline" size="sm" onClick={handlePreviousMonth}>
 						<ChevronLeft className="size-4" />
 					</Button>
 					<Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
-					<PopoverTrigger asChild>
-						<Button variant="ghost" className="text-sm font-semibold min-w-[150px] hover:bg-accent">
-							{monthName}
-						</Button>
-					</PopoverTrigger>
+						<PopoverTrigger asChild>
+							<Button variant="ghost" className="text-xs sm:text-sm font-semibold min-w-[120px] sm:min-w-[150px] hover:bg-accent">
+								{monthName}
+							</Button>
+						</PopoverTrigger>
 						<PopoverContent className="w-auto p-3" align="start">
 							<div className="space-y-4">
 								{/* Year Selector */}
@@ -156,7 +156,7 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 						<ChevronRight className="size-4" />
 					</Button>
 				</div>
-				<Button variant="outline" size="sm" onClick={handleToday} disabled={isCurrentMonth}>
+				<Button variant="outline" size="sm" onClick={handleToday} disabled={isCurrentMonth} className="w-full sm:w-auto">
 					Today
 				</Button>
 			</div>
@@ -168,16 +168,16 @@ export function JournalCalendar({ currentMonth, onMonthChange }: JournalCalendar
 			) : (
 				<div className="space-y-1">
 					{/* Day Headers */}
-					<div className="grid grid-cols-7 gap-0.5 max-w-[500px] mx-auto">
+					<div className="grid grid-cols-7 gap-0.5 max-w-full sm:max-w-[500px] mx-auto">
 						{dayNames.map((day) => (
-							<div key={day} className="text-center text-[12px] font-medium text-muted-foreground py-0.5">
+							<div key={day} className="text-center text-[10px] sm:text-[12px] font-medium text-muted-foreground py-0.5">
 								{day}
 							</div>
 						))}
 					</div>
 
 					{/* Calendar Grid */}
-					<div className="grid grid-cols-7 gap-0.5 max-w-[500px] mx-auto">
+					<div className="grid grid-cols-7 gap-0.5 max-w-full sm:max-w-[500px] mx-auto">
 						{/* Previous month's trailing days */}
 						{Array.from({ length: startingDayOfWeek }).map((_, idx) => {
 							const day = daysInPrevMonth - startingDayOfWeek + idx + 1

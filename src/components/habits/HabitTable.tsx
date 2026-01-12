@@ -359,7 +359,7 @@ export function HabitTable({ onHabitClick, view, dates: customDates, startDate, 
 					<table className="w-full border-collapse">
 						<thead>
 							<tr className="border-b bg-muted/30">
-								<th className="text-left p-5 font-semibold sticky left-0 bg-muted/30 z-10 min-w-[300px] border-r">
+								<th className="text-left p-3 sm:p-4 md:p-5 font-semibold sticky left-0 bg-muted/30 z-10 min-w-[200px] sm:min-w-[250px] md:min-w-[300px] border-r">
 									Habits
 								</th>
 								{dates.map((date) => {
@@ -369,7 +369,7 @@ export function HabitTable({ onHabitClick, view, dates: customDates, startDate, 
 									return (
 										<th
 											key={dateStr}
-											className={`p-4 text-center font-normal min-w-[120px] transition-colors ${
+											className={`p-2 sm:p-3 md:p-4 text-center font-normal min-w-[80px] sm:min-w-[100px] md:min-w-[120px] transition-colors ${
 												isToday
 													? "bg-primary/15"
 													: isWeekend
@@ -377,11 +377,11 @@ export function HabitTable({ onHabitClick, view, dates: customDates, startDate, 
 													: ""
 											}`}
 										>
-											<div className="flex flex-col items-center gap-1">
-												<span className={`text-xs ${isWeekend ? "text-primary/70" : "text-muted-foreground"}`}>
+											<div className="flex flex-col items-center gap-0.5 sm:gap-1">
+												<span className={`text-[10px] sm:text-xs ${isWeekend ? "text-primary/70" : "text-muted-foreground"}`}>
 													{formatDayHeader(date)}
 												</span>
-												<span className={`text-sm ${isToday ? "font-bold text-primary" : ""}`}>
+												<span className={`text-xs sm:text-sm ${isToday ? "font-bold text-primary" : ""}`}>
 													{formatDayShort(date)}
 												</span>
 											</div>

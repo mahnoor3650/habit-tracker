@@ -257,15 +257,15 @@ export default function Dashboard() {
 	}, [habits, selectedCategory])
 
 	return (
-    <div className="w-full px-16 py-8 space-y-8">
-      <header className="flex items-center justify-between">
+    <div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <div>
-          <h1 className="text-2xl font-semibold">Your Habits</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">Your Habits</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button size="sm" className="w-full sm:w-auto">
                 <Plus className="mr-2 size-4" />
                 Add Habit
               </Button>
@@ -281,147 +281,151 @@ export default function Dashboard() {
       </header>
 
       {/* Date Navigation */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-md text-muted-foreground">{dateRangeLabel}</div>
-        <div className="flex items-center gap-2">
-          {/* Category Filter */}
-
-          <Button variant="outline" size="icon" onClick={handlePrevious}>
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleToday}
-            className="min-w-[80px]"
-          >
-            Today
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleNext}>
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue>
-                <div className="flex items-center gap-2">
-                  <Filter className="size-4" />
-                  <span>
-                    {selectedCategory === "all" ? "All" : selectedCategory}
-                  </span>
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                <div className="flex items-center gap-2">
-                  <Filter className="size-4" />
-                  All
-                </div>
-              </SelectItem>
-              {availableCategories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 lg:gap-4">
+        <div className="text-sm sm:text-base text-muted-foreground text-center lg:text-left">{dateRangeLabel}</div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
+          {/* Date Navigation Buttons */}
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="outline" size="icon" onClick={handlePrevious} className="h-9">
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleToday}
+              className="min-w-[80px] h-9 text-sm"
+            >
+              Today
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleNext} className="h-9">
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+          {/* Filters and View Selector */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    <Filter className="size-4" />
+                    <span className="truncate">
+                      {selectedCategory === "all" ? "All" : selectedCategory}
+                    </span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <Filter className="size-4" />
+                    All
+                  </div>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={view}
-            onValueChange={(value) => {
-              setView(value as ViewMode);
-              setDateOffset(0);
-              if (value !== "custom") {
-                setCustomStartDate("");
-                setCustomEndDate("");
-              }
-            }}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue>
-                <div className="flex items-center gap-2">
-                  {view === "week" && <Calendar className="size-4" />}
-                  {view === "15days" && <CalendarRange className="size-4" />}
-                  {view === "month" && <CalendarDays className="size-4" />}
-                  {view === "custom" && <CalendarCheck className="size-4" />}
-                  <span>
-                    {view === "week"
-                      ? "Week"
-                      : view === "15days"
-                      ? "15 Days"
-                      : view === "month"
-                      ? "Month"
-                      : "Custom"}
-                  </span>
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">
-                <div className="flex items-center gap-2">
-                  <Calendar className="size-4" />
-                  Week
-                </div>
-              </SelectItem>
-              <SelectItem value="15days">
-                <div className="flex items-center gap-2">
-                  <CalendarRange className="size-4" />
-                  15 Days
-                </div>
-              </SelectItem>
-              <SelectItem value="month">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="size-4" />
-                  Month
-                </div>
-              </SelectItem>
-              <SelectItem value="custom">
-                <div className="flex items-center gap-2">
-                  <CalendarCheck className="size-4" />
-                  Custom Range
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={view}
+              onValueChange={(value) => {
+                setView(value as ViewMode);
+                setDateOffset(0);
+                if (value !== "custom") {
+                  setCustomStartDate("");
+                  setCustomEndDate("");
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {view === "week" && <Calendar className="size-4" />}
+                    {view === "15days" && <CalendarRange className="size-4" />}
+                    {view === "month" && <CalendarDays className="size-4" />}
+                    {view === "custom" && <CalendarCheck className="size-4" />}
+                    <span className="truncate">
+                      {view === "week"
+                        ? "Week"
+                        : view === "15days"
+                        ? "15 Days"
+                        : view === "month"
+                        ? "Month"
+                        : "Custom"}
+                    </span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="size-4" />
+                    Week
+                  </div>
+                </SelectItem>
+                <SelectItem value="15days">
+                  <div className="flex items-center gap-2">
+                    <CalendarRange className="size-4" />
+                    15 Days
+                  </div>
+                </SelectItem>
+                <SelectItem value="month">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="size-4" />
+                    Month
+                  </div>
+                </SelectItem>
+                <SelectItem value="custom">
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck className="size-4" />
+                    Custom Range
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          {view === "custom" && (
-            <Popover open={customDateOpen} onOpenChange={setCustomDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-[240px] justify-start text-left font-normal"
-                >
-                  <CalendarCheck className="mr-2 size-4" />
-                  {customStartDate && customEndDate
-                    ? dateRangeLabel
-                    : "Select date range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-4" align="start">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Start Date</Label>
-                    <Input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>End Date</Label>
-                    <Input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                    />
-                  </div>
-                  <Button onClick={handleCustomDateRange} className="w-full">
-                    Apply Range
+            {view === "custom" && (
+              <Popover open={customDateOpen} onOpenChange={setCustomDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-[240px] justify-start text-left font-normal h-9 text-sm"
+                  >
+                    <CalendarCheck className="mr-2 size-4" />
+                    <span className="truncate">
+                      {customStartDate && customEndDate
+                        ? dateRangeLabel
+                        : "Select date range"}
+                    </span>
                   </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleCustomDateRange} className="w-full">
+                      Apply Range
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
         </div>
       </div>
 
@@ -437,15 +441,15 @@ export default function Dashboard() {
 
       {/* Metrics Section */}
       <div className="space-y-4">
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h2 className="text-xl font-semibold">Daily Metrics</h2>
-            <p className="text-sm text-muted-foreground">Track numeric values like sleep, water, steps, etc.</p>
+            <h2 className="text-lg sm:text-xl font-semibold">Daily Metrics</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Track numeric values like sleep, water, steps, etc.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Dialog open={metricCreateOpen} onOpenChange={setMetricCreateOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-2 size-4" />
                   Add Metric
                 </Button>

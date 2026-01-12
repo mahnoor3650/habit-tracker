@@ -189,18 +189,18 @@ export default function Journal() {
 		})
 
 		return (
-			<div className="w-full px-16 py-8 space-y-6 max-w-7xl mx-auto">
+			<div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
 				{/* Header with Date Navigation */}
-				<div className="flex items-center justify-between">
+				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
 					<div>
-						<h1 className="text-2xl font-semibold">Journal Entry</h1>
-						<p className="text-sm text-muted-foreground">{dateLabel}</p>
+						<h1 className="text-xl sm:text-2xl font-semibold">Journal Entry</h1>
+						<p className="text-xs sm:text-sm text-muted-foreground">{dateLabel}</p>
 					</div>
-					<div className="flex items-center gap-3">
-						<Button variant="outline" size="sm" onClick={handleBackToCalendar}>
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+						<Button variant="outline" size="sm" onClick={handleBackToCalendar} className="w-full sm:w-auto">
 							← Back
 						</Button>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-2 justify-center sm:justify-start">
 							<Button variant="outline" size="sm" onClick={handlePreviousDay}>
 								←
 							</Button>
@@ -214,7 +214,7 @@ export default function Journal() {
 						<Button 
 							onClick={handleSave} 
 							disabled={isSaving || !hasChanges}
-							className={!isSaving && hasChanges ? "cursor-pointer" : ""}
+							className={`w-full sm:w-auto ${!isSaving && hasChanges ? "cursor-pointer" : ""}`}
 						>
 							{isSaving ? (
 								<>
@@ -236,22 +236,22 @@ export default function Journal() {
 						<Loader2 className="size-8 animate-spin text-primary" />
 					</div>
 				) : (
-					<div className="space-y-6">
-						{/* Row 1: Moods and Quote */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-							<MoodSelector selectedMoods={moods} onMoodsChange={setMoods} />
-							<QuoteSection quote={quote} onQuoteChange={setQuote} />
-						</div>
-
-						{/* Row 2: Gratitude and Highlight */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-							<GratitudeSection gratitude={gratitude} onGratitudeChange={setGratitude} />
-							<HighlightSection highlight={highlights.join('\n')} onHighlightChange={setHighlights} />
-						</div>
-
-						{/* Row 3: Journal Editor (Full Width) */}
-						<JournalEditor content={content} onContentChange={setContent} />
+				<div className="space-y-4 sm:space-y-6">
+					{/* Row 1: Moods and Quote */}
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+						<MoodSelector selectedMoods={moods} onMoodsChange={setMoods} />
+						<QuoteSection quote={quote} onQuoteChange={setQuote} />
 					</div>
+
+					{/* Row 2: Gratitude and Highlight */}
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+						<GratitudeSection gratitude={gratitude} onGratitudeChange={setGratitude} />
+						<HighlightSection highlight={highlights.join('\n')} onHighlightChange={setHighlights} />
+					</div>
+
+					{/* Row 3: Journal Editor (Full Width) */}
+					<JournalEditor content={content} onContentChange={setContent} />
+				</div>
 				)}
 			</div>
 		)
@@ -259,18 +259,19 @@ export default function Journal() {
 
 	// Otherwise show calendar/list view
 	return (
-		<div className="w-full px-16 py-8 space-y-6 max-w-7xl mx-auto">
+		<div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
 			{/* Header with View Toggle */}
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
 				<div>
-					<h1 className="text-2xl font-semibold">Journal</h1>
-					<p className="text-sm text-muted-foreground">View and manage your journal entries</p>
+					<h1 className="text-xl sm:text-2xl font-semibold">Journal</h1>
+					<p className="text-xs sm:text-sm text-muted-foreground">View and manage your journal entries</p>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 w-full sm:w-auto">
 					<Button
 						variant={viewMode === "calendar" ? "default" : "outline"}
 						size="sm"
 						onClick={() => handleViewChange("calendar")}
+						className="flex-1 sm:flex-initial"
 					>
 						<Calendar className="mr-2 size-4" />
 						Calendar
@@ -279,6 +280,7 @@ export default function Journal() {
 						variant={viewMode === "list" ? "default" : "outline"}
 						size="sm"
 						onClick={() => handleViewChange("list")}
+						className="flex-1 sm:flex-initial"
 					>
 						<List className="mr-2 size-4" />
 						List

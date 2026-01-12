@@ -41,34 +41,36 @@ export function Header() {
 
 	return (
     <header className="w-full border-b bg-card/50 backdrop-blur-sm">
-      <div className="w-full px-16 h-16 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 h-16 flex items-center justify-between">
         <Link
           to="/"
-          className="font-semibold hover:opacity-80 transition-opacity"
+          className="font-semibold hover:opacity-80 transition-opacity text-sm sm:text-base"
         >
           Habit Pilot
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {!isLoginPage && (
-            <nav className="flex items-center gap-1 mr-4">
+            <nav className="flex items-center gap-0.5 sm:gap-1 mr-2 sm:mr-4">
               <Button
                 asChild
                 variant={isDashboardPage ? "secondary" : "ghost"}
                 size="sm"
+                className="text-xs sm:text-sm px-2 sm:px-3"
               >
                 <Link to="/">
-                  <Calendar className="mr-2 size-4" />
-                  Habits
+                  <Calendar className="mr-1 sm:mr-2 size-3 sm:size-4" />
+                  <span className="hidden sm:inline">Habits</span>
                 </Link>
               </Button>
               <Button
                 asChild
                 variant={isJournalPage ? "secondary" : "ghost"}
                 size="sm"
+                className="text-xs sm:text-sm px-2 sm:px-3"
               >
                 <Link to="/journal">
-                  <BookOpen className="mr-2 size-4" />
-                  Journal
+                  <BookOpen className="mr-1 sm:mr-2 size-3 sm:size-4" />
+                  <span className="hidden sm:inline">Journal</span>
                 </Link>
               </Button>
             </nav>

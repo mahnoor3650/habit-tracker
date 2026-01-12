@@ -128,7 +128,7 @@ function SortableMetricRow({
 			style={style}
 			className="border-b hover:bg-muted/50 transition-colors"
 		>
-			<td className="sticky left-0 bg-background z-10 min-w-[300px] border-r p-4">
+			<td className="sticky left-0 bg-background z-10 min-w-[200px] sm:min-w-[250px] md:min-w-[300px] border-r p-3 sm:p-4">
 				<div className="flex items-center gap-2">
 					<button
 						{...attributes}
@@ -136,16 +136,16 @@ function SortableMetricRow({
 						className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1"
 						type="button"
 					>
-						<GripVertical className="size-4" />
+						<GripVertical className="size-3 sm:size-4" />
 					</button>
 					<button
 						type="button"
 						onClick={() => onMetricClick(metric)}
-						className="flex items-center gap-2 flex-1 text-left hover:underline"
+						className="flex items-center gap-2 flex-1 text-left hover:underline min-w-0"
 					>
 						{getIcon(metric.icon)}
-						<div className="flex flex-col items-start">
-							<span className="font-medium">{metric.name}</span>
+						<div className="flex flex-col items-start min-w-0 flex-1">
+							<span className="font-medium text-sm sm:text-base truncate w-full">{metric.name}</span>
 							{metric.unit && (
 								<span className="text-xs text-muted-foreground">{metric.unit}</span>
 							)}
@@ -162,7 +162,7 @@ function SortableMetricRow({
 				return (
 					<td
 						key={dateStr}
-						className={`text-center p-4 min-w-[120px] transition-colors ${
+						className={`text-center p-2 sm:p-3 md:p-4 min-w-[80px] sm:min-w-[100px] md:min-w-[120px] transition-colors ${
 							isToday ? "bg-primary/15" : isWeekend ? "bg-muted/20" : ""
 						}`}
 					>
@@ -175,7 +175,7 @@ function SortableMetricRow({
 								const newValue = parseFloat(e.target.value) || 0
 								onValueChange(metric.id, dateStr, newValue)
 							}}
-							className="w-full h-8 text-center text-sm"
+							className="w-full h-7 sm:h-8 text-center text-xs sm:text-sm"
 							placeholder="0"
 						/>
 					</td>

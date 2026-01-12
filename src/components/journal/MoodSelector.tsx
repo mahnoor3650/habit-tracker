@@ -52,7 +52,7 @@ export function MoodSelector({ selectedMoods, onMoodsChange }: MoodSelectorProps
 					</Button>
 				)}
 			</div>
-			<div className="grid grid-cols-6 gap-1.5">
+			<div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
 				{MOOD_EMOJIS.map(({ emoji, label }) => {
 					const isSelected = moods.includes(emoji)
 					return (
