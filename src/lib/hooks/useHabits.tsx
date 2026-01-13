@@ -23,13 +23,20 @@ export type HabitEntry = {
 	created_at?: string
 }
 
+function formatDateISO(date: Date): string {
+	const year = date.getFullYear()
+	const month = String(date.getMonth() + 1).padStart(2, '0')
+	const day = String(date.getDate()).padStart(2, '0')
+	return `${year}-${month}-${day}`
+}
+
 export function getLastNDates(n: number): string[] {
 	const dates: string[] = []
 	const today = new Date()
 	for (let i = 0; i < n; i++) {
 		const d = new Date(today)
 		d.setDate(today.getDate() - i)
-		dates.push(d.toISOString().slice(0, 10))
+		dates.push(formatDateISO(d))
 	}
 	return dates.reverse()
 }
@@ -97,7 +104,7 @@ export function getBestWorstDays(entriesByDate: Record<string, boolean>, startDa
 		dates = []
 		const current = new Date(start)
 		while (current <= end) {
-			dates.push(current.toISOString().slice(0, 10))
+			dates.push(formatDateISO(current))
 			current.setDate(current.getDate() + 1)
 		}
 	} else {

@@ -32,7 +32,9 @@ export function HabitCalendar({ habitId }: { habitId: string }) {
 			<div className="text-sm text-muted-foreground">{percent}% completed • Streak: {streak}</div>
 			<div className="grid grid-cols-7 gap-2">
 				{days.map((d) => {
-					const isToday = d === new Date().toISOString().slice(0, 10)
+					const today = new Date()
+					const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+					const isToday = d === todayStr
 					return (
 						<label
 							key={d}
