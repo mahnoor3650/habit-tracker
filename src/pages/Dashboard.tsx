@@ -83,7 +83,7 @@ export default function Dashboard() {
 	const [metricCreateOpen, setMetricCreateOpen] = useState(false)
 	const [metricEditOpen, setMetricEditOpen] = useState(false)
 	const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null)
-	const [view, setView] = useState<ViewMode>("15days")
+	const [view, setView] = useState<ViewMode>("week")
 	const [dateOffset, setDateOffset] = useState(0)
 	const [customStartDate, setCustomStartDate] = useState<string>("")
 	const [customEndDate, setCustomEndDate] = useState<string>("")
