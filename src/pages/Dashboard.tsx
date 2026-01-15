@@ -93,6 +93,8 @@ export default function Dashboard() {
 	const [sleepEntries, setSleepEntries] = useState<Record<string, number>>({})
 	const [waterEntries, setWaterEntries] = useState<Record<string, number>>({})
 	const [loadingCharts, setLoadingCharts] = useState(false)
+	const [chartDates, setChartDates] = useState<Date[]>([])
+	const [showCharts, setShowCharts] = useState(false)
 
 	async function handleCreate(values: HabitFormValues) {
 		const result = await createHabit(values)
@@ -272,34 +274,72 @@ export default function Dashboard() {
 		return metrics.find((m) => m.name.toLowerCase().includes("water"))
 	}, [metrics])
 
-	// Load chart data when date range or metrics change
+	// Load chart data - show past 10 days if sleep has value for today
 	useEffect(() => {
 		async function loadChartData() {
 			setLoadingCharts(true)
-			const startDateISO = dateRange.startDate
-			const endDateISO = dateRange.endDate
-
-			if (sleepMetric && startDateISO && endDateISO) {
-				const { data } = await getEntriesForMetric(sleepMetric.id, startDateISO, endDateISO)
-				setSleepEntries(data ?? {})
-			} else {
+			
+			if (!sleepMetric) {
+				setShowCharts(false)
 				setSleepEntries({})
+				setWaterEntries({})
+				setChartDates([])
+				setLoadingCharts(false)
+				return
 			}
 
-			if (waterMetric && startDateISO && endDateISO) {
-				const { data } = await getEntriesForMetric(waterMetric.id, startDateISO, endDateISO)
-				setWaterEntries(data ?? {})
+			// Check if sleep has a value for today
+			const today = new Date()
+			const todayStr = formatDateISO(today)
+			const { data: todayData } = await getEntriesForMetric(sleepMetric.id, todayStr, todayStr)
+			
+			if (!todayData || !todayData[todayStr] || todayData[todayStr] === 0) {
+				// No sleep value for today, don't show charts
+				setShowCharts(false)
+				setSleepEntries({})
+				setWaterEntries({})
+				setChartDates([])
+				setLoadingCharts(false)
+				return
+			}
+
+			// Calculate past 10 days (including today)
+			const dates: Date[] = []
+			for (let i = 9; i >= 0; i--) {
+				const date = new Date(today)
+				date.setDate(today.getDate() - i)
+				dates.push(date)
+			}
+			setChartDates(dates)
+
+			const startDateISO = formatDateISO(dates[0])
+			const endDateISO = formatDateISO(dates[dates.length - 1])
+
+			// Load sleep data for past 10 days
+			const { data: sleepData } = await getEntriesForMetric(sleepMetric.id, startDateISO, endDateISO)
+			setSleepEntries(sleepData ?? {})
+
+			// Load water data for past 10 days
+			if (waterMetric) {
+				const { data: waterData } = await getEntriesForMetric(waterMetric.id, startDateISO, endDateISO)
+				setWaterEntries(waterData ?? {})
 			} else {
 				setWaterEntries({})
 			}
 
+			setShowCharts(true)
 			setLoadingCharts(false)
 		}
 
-		if (dateRange.startDate && dateRange.endDate) {
+		if (sleepMetric) {
 			loadChartData()
+		} else {
+			setShowCharts(false)
+			setSleepEntries({})
+			setWaterEntries({})
+			setChartDates([])
 		}
-	}, [dateRange, sleepMetric, waterMetric, getEntriesForMetric])
+	}, [sleepMetric, waterMetric, getEntriesForMetric])
 
 	return (
     <div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
@@ -518,16 +558,16 @@ export default function Dashboard() {
           metrics={metrics}
         />
 
-        {/* Sleep and Water Charts */}
-        {(sleepMetric || waterMetric) && (
+        {/* Sleep and Water Charts - Show past 10 days if sleep has value for today */}
+        {showCharts && chartDates.length > 0 && (
           <div className="space-y-4 mt-6">
-            <h3 className="text-lg font-semibold">Visualizations</h3>
+            <h3 className="text-lg font-semibold">Visualizations (Last 10 Days)</h3>
             <div className="grid gap-4 md:grid-cols-2">
               {sleepMetric && (
                 <MetricChart
                   metric={sleepMetric}
                   entries={sleepEntries}
-                  dates={dateRange.dates}
+                  dates={chartDates}
                   loading={loadingCharts}
                 />
               )}
@@ -535,7 +575,7 @@ export default function Dashboard() {
                 <MetricChart
                   metric={waterMetric}
                   entries={waterEntries}
-                  dates={dateRange.dates}
+                  dates={chartDates}
                   loading={loadingCharts}
                 />
               )}
