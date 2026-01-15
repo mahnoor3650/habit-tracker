@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useHabits } from "@/lib/hooks/useHabits"
 import type { Habit } from "@/lib/hooks/useHabits"
 import { useMetrics } from "@/lib/hooks/useMetrics"
@@ -6,6 +6,7 @@ import type { Metric } from "@/lib/hooks/useMetrics"
 import { HabitTable } from "@/components/habits/HabitTable"
 import { MetricsTable } from "@/components/metrics/MetricsTable"
 import { MetricForm, type MetricFormValues } from "@/components/metrics/MetricForm"
+import { MetricChart } from "@/components/metrics/MetricChart"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { HabitForm, type HabitFormValues } from "@/components/habits/HabitForm"
@@ -76,7 +77,7 @@ function getDatesForView(view: ViewMode, offset: number = 0, customStart?: strin
 
 export default function Dashboard() {
 	const { habits, updateHabit, createHabit, deleteHabit, refresh, reorderHabits } = useHabits()
-	const { metrics, updateMetric, createMetric, deleteMetric, refresh: refreshMetrics, reorderMetrics } = useMetrics()
+	const { metrics, updateMetric, createMetric, deleteMetric, refresh: refreshMetrics, reorderMetrics, getEntriesForMetric } = useMetrics()
 	const [createOpen, setCreateOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 	const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
@@ -89,6 +90,9 @@ export default function Dashboard() {
 	const [customEndDate, setCustomEndDate] = useState<string>("")
 	const [customDateOpen, setCustomDateOpen] = useState(false)
 	const [selectedCategory, setSelectedCategory] = useState<string>("all")
+	const [sleepEntries, setSleepEntries] = useState<Record<string, number>>({})
+	const [waterEntries, setWaterEntries] = useState<Record<string, number>>({})
+	const [loadingCharts, setLoadingCharts] = useState(false)
 
 	async function handleCreate(values: HabitFormValues) {
 		const result = await createHabit(values)
@@ -258,6 +262,44 @@ export default function Dashboard() {
 		}
 		return habits.filter((habit) => habit.category === selectedCategory)
 	}, [habits, selectedCategory])
+
+	// Find sleep and water metrics (case-insensitive)
+	const sleepMetric = useMemo(() => {
+		return metrics.find((m) => m.name.toLowerCase().includes("sleep"))
+	}, [metrics])
+
+	const waterMetric = useMemo(() => {
+		return metrics.find((m) => m.name.toLowerCase().includes("water"))
+	}, [metrics])
+
+	// Load chart data when date range or metrics change
+	useEffect(() => {
+		async function loadChartData() {
+			setLoadingCharts(true)
+			const startDateISO = dateRange.startDate
+			const endDateISO = dateRange.endDate
+
+			if (sleepMetric && startDateISO && endDateISO) {
+				const { data } = await getEntriesForMetric(sleepMetric.id, startDateISO, endDateISO)
+				setSleepEntries(data ?? {})
+			} else {
+				setSleepEntries({})
+			}
+
+			if (waterMetric && startDateISO && endDateISO) {
+				const { data } = await getEntriesForMetric(waterMetric.id, startDateISO, endDateISO)
+				setWaterEntries(data ?? {})
+			} else {
+				setWaterEntries({})
+			}
+
+			setLoadingCharts(false)
+		}
+
+		if (dateRange.startDate && dateRange.endDate) {
+			loadChartData()
+		}
+	}, [dateRange, sleepMetric, waterMetric, getEntriesForMetric])
 
 	return (
     <div className="w-full px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
@@ -475,6 +517,31 @@ export default function Dashboard() {
           onReorder={handleReorderMetrics}
           metrics={metrics}
         />
+
+        {/* Sleep and Water Charts */}
+        {(sleepMetric || waterMetric) && (
+          <div className="space-y-4 mt-6">
+            <h3 className="text-lg font-semibold">Visualizations</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              {sleepMetric && (
+                <MetricChart
+                  metric={sleepMetric}
+                  entries={sleepEntries}
+                  dates={dateRange.dates}
+                  loading={loadingCharts}
+                />
+              )}
+              {waterMetric && (
+                <MetricChart
+                  metric={waterMetric}
+                  entries={waterEntries}
+                  dates={dateRange.dates}
+                  loading={loadingCharts}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Habit Dialog */}
